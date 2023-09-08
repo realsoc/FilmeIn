@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
@@ -71,7 +72,6 @@ fun onWatchStatusChangeForMovie(
 // TODO : How to handle colors
 // TODO : Splash screen
 // TODO : Error message in dialog
-// TODO : Put everything in one list
 
 val deletingMovieBackground = DismissBackground(Color.Red, Icons.Default.Delete)
 
@@ -161,20 +161,18 @@ fun LazyListScope.showMovieListIfNotEmpty(
     }
 }
 
-fun Movie.getWatchStatusDrawable(): ImageVector {
-    return if (watched) EyeOpen else EyeClosed
-}
 
 @Composable
 fun MovieTile(movie: Movie, onWatchStatusChange: (watched: Boolean) -> Unit) {
     Column {
         ListItem(
-            modifier = Modifier.clickable { println("${movie.title} clicked") },
+            modifier = Modifier.clickable { println("${movie.title} clicked") }.testTag("listItem"),
             headlineContent = { Text(movie.title) },
             trailingContent = {
                 IconButton(
                     onClick = { onWatchStatusChange(!movie.watched) },
-                    content = { Icon(movie.getWatchStatusDrawable(), "", tint = Color.Unspecified) })
+                    content = { Icon(movie.getWatchStatusDrawable(), "switch watched status", tint = Color
+                        .Unspecified) })
             }
         )
         Divider(color = Color.LightGray)

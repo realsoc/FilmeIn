@@ -1,3 +1,5 @@
+import com.android.build.api.dsl.Packaging
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -38,12 +40,18 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+
+    packaging {
+        resources.excludes.add("META-INF/*")
+    }
 }
 
 dependencies {
 
+
+
     implementation("androidx.compose.ui:ui-android:1.5.0")
-    val composeBom = platform("androidx.compose:compose-bom:2023.06.00")
+    val composeBom = platform("androidx.compose:compose-bom:2023.08.00")
     implementation("androidx.core:core-ktx:1.10.1")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.9.0")
@@ -65,7 +73,15 @@ dependencies {
     implementation("com.airbnb.android:lottie-compose:6.1.0")
 
     // UI Tests
+
+    // Waiting https://github.com/mockk/mockk/issues/1035 to close before updating
+    testImplementation("io.mockk:mockk:1.13.3")
+    androidTestImplementation("io.mockk:mockk-android:1.13.3")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
     testImplementation("junit:junit:4.13.2")

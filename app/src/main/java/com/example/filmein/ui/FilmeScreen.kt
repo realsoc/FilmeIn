@@ -14,23 +14,34 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.tooling.preview.Preview
-import com.example.filmein.Movie
+import com.example.filmein.FilmeScreenViewModel
+import kotlinx.coroutines.flow.onEach
+
 
 @Composable
 @Preview
-fun FilmeApp() {
-    val movies = remember { mutableStateListOf<Movie>() }
-    var text by remember { mutableStateOf("") }
-    var shouldShowDialog by remember { mutableStateOf(false) }
+fun FilmeScreenPreview() {
+    FilmeScreen(viewModel = FilmeScreenViewModel())
+}
+@Composable
+fun FilmeScreen(viewModel: FilmeScreenViewModel) {
+    var dialogText by remember { mutableStateOf("") }
+
+    val movies by viewModel.movieListState.collectAsState()
+    val shouldShowDialog by viewModel.dialogState.collectAsState()
+
+    if (!shouldShowDialog) {
+        dialogText = ""
+    }
+
     val infiniteTransition = rememberInfiniteTransition("InfiniteTransition")
     val scale by infiniteTransition.animateFloat(
         initialValue = 0.9f,
@@ -42,17 +53,10 @@ fun FilmeApp() {
         label = "ScaleTransition"
     )
 
-    val onNewText: (String) -> Unit = { newText -> text = newText }
-    val onHideDialog = { shouldShowDialog = false }
-    val onDialogDismissed = {
-        onHideDialog()
-        text = ""
-    }
-
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { shouldShowDialog = true },
+                onClick = { viewModel.showDialog() },
                 content = { Icon(Icons.Default.Add,
                     modifier = Modifier.scale(movies.isEmpty().ifTrue { scale } ?: 1F),
                     contentDescription = "Add movie") }
@@ -62,45 +66,36 @@ fun FilmeApp() {
             if (shouldShowDialog) {
                 EnterTextDialog(
                     // TODO extract text
-                    title = { Text(text = "Movie / TV Show") },
+                    title = { Text(text = "Add Movie / TV Show") },
                     dismissButton = {
                         TextButton(
-                            onClick = onDialogDismissed,
+                            onClick = viewModel::dismissDialog,
                             content = { Text("Dismiss") }
                         )
                     },
                     confirmButton = {
                         TextButton(
                             onClick = {
-                                if (text != "") {
-                                    movies.remove(Movie(text))
-                                    movies.add(0, Movie(text))
+                                if (dialogText != "") {
+                                    viewModel.addMovie(dialogText)
                                 }
-                                onDialogDismissed() },
+                                viewModel.dismissDialog() },
                             content = { Text("Ok") }
                         )
                     },
                     hint = { Text("Title") },
-                    value = text,
-                    onNewText = onNewText,
-                    onDismissRequest = onDialogDismissed
+                    value = dialogText,
+                    onNewText = { newText -> dialogText = newText },
+                    onDismissRequest = viewModel::dismissDialog
                 )
             }
             MovieList(
                 paddingValues = paddingValues,
                 movies = movies,
-                onMovieDeleted = movies::remove,
-                onWatchedStatusChangeForMovie = movies::onWatchStatusChangeForMovie
+                onMovieDeleted = viewModel::removeMovie,
+                onWatchedStatusChangeForMovie = viewModel::changeWatchStatusForMovie
             )
         })
-}
-
-fun SnapshotStateList<Movie>.onWatchStatusChangeForMovie(movie: Movie, watched: Boolean) {
-    val movieIndex = indexOf(movie)
-    if (movieIndex >= 0) {
-        remove(movie)
-        add(movieIndex, Movie(movie.title, watched))
-    }
 }
 
 fun <T>Boolean.ifTrue(block: () -> T): T? {
