@@ -23,8 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.filmein.FilmeScreenViewModel
-import kotlinx.coroutines.flow.onEach
-
+import com.example.filmein.ifTrue
 
 @Composable
 @Preview
@@ -33,14 +32,8 @@ fun FilmeScreenPreview() {
 }
 @Composable
 fun FilmeScreen(viewModel: FilmeScreenViewModel) {
-    var dialogText by remember { mutableStateOf("") }
-
     val movies by viewModel.movieListState.collectAsState()
     val shouldShowDialog by viewModel.dialogState.collectAsState()
-
-    if (!shouldShowDialog) {
-        dialogText = ""
-    }
 
     val infiniteTransition = rememberInfiniteTransition("InfiniteTransition")
     val scale by infiniteTransition.animateFloat(
@@ -56,7 +49,7 @@ fun FilmeScreen(viewModel: FilmeScreenViewModel) {
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { viewModel.showDialog() },
+                onClick = { viewModel.addMovieClicked() },
                 content = { Icon(Icons.Default.Add,
                     modifier = Modifier.scale(movies.isEmpty().ifTrue { scale } ?: 1F),
                     contentDescription = "Add movie") }
@@ -64,8 +57,8 @@ fun FilmeScreen(viewModel: FilmeScreenViewModel) {
         },
         content = { paddingValues ->
             if (shouldShowDialog) {
+                var dialogText by remember { mutableStateOf("") }
                 EnterTextDialog(
-                    // TODO extract text
                     title = { Text(text = "Add Movie / TV Show") },
                     dismissButton = {
                         TextButton(
@@ -77,7 +70,7 @@ fun FilmeScreen(viewModel: FilmeScreenViewModel) {
                         TextButton(
                             onClick = {
                                 if (dialogText != "") {
-                                    viewModel.addMovie(dialogText)
+                                    viewModel.submitDialog(dialogText)
                                 }
                                 viewModel.dismissDialog() },
                             content = { Text("Ok") }
@@ -86,22 +79,14 @@ fun FilmeScreen(viewModel: FilmeScreenViewModel) {
                     hint = { Text("Title") },
                     value = dialogText,
                     onNewText = { newText -> dialogText = newText },
-                    onDismissRequest = viewModel::dismissDialog
+                    onDismissRequest = viewModel::dismissDialog,
                 )
             }
             MovieList(
                 paddingValues = paddingValues,
                 movies = movies,
-                onMovieDeleted = viewModel::removeMovie,
-                onWatchedStatusChangeForMovie = viewModel::changeWatchStatusForMovie
+                onMovieDeleted = viewModel::movieSwipedRight,
+                onWatchedStatusChangeForMovie = viewModel::eyeToggled
             )
         })
-}
-
-fun <T>Boolean.ifTrue(block: () -> T): T? {
-    return if (this) {
-        block.invoke()
-    } else {
-        null
-    }
 }

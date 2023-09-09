@@ -56,11 +56,11 @@ class FilmeScreenTest {
             viewModel.movieListState
         } returns movieListStateFlow.asStateFlow()
 
-        every { viewModel.showDialog() } just Runs
+        every { viewModel.addMovieClicked() } just Runs
         every { viewModel.dismissDialog() } just Runs
-        every { viewModel.removeMovie(any()) } just Runs
-        every { viewModel.addMovie(any()) } just Runs
-        every { viewModel.changeWatchStatusForMovie(any(), any()) } just Runs
+        every { viewModel.movieSwipedRight(any()) } just Runs
+        every { viewModel.submitDialog(any()) } just Runs
+        every { viewModel.eyeToggled(any(), any()) } just Runs
 
         composeTestRule.setContent {
             FilmeScreen(viewModel = viewModel)
@@ -71,7 +71,7 @@ class FilmeScreenTest {
         composeTestRule.onNodeWithContentDescription("Add movie").performClick()
 
         verify {
-            viewModel.showDialog()
+            viewModel.addMovieClicked()
         }
     }
 
@@ -103,7 +103,7 @@ class FilmeScreenTest {
         composeTestRule.onNodeWithText("movie1").performTouchInput { swipeRight() }
 
         verify {
-            viewModel.removeMovie(match { it.title == "movie1" })
+            viewModel.movieSwipedRight(match { it.title == "movie1" })
         }
     }
 
@@ -114,7 +114,7 @@ class FilmeScreenTest {
         composeTestRule.onNode(hasParent(hasText("movie1")).and(hasContentDescription("switch watched status"))).performClick()
 
         verify {
-            viewModel.changeWatchStatusForMovie(match { it.title == "movie1" }, true)
+            viewModel.eyeToggled(match { it.title == "movie1" }, true)
         }
     }
 
@@ -127,7 +127,7 @@ class FilmeScreenTest {
         composeTestRule.onNodeWithText("Dismiss").performClick()
 
         verify(exactly = 0) {
-            viewModel.addMovie(any())
+            viewModel.submitDialog(any())
         }
     }
 
@@ -140,7 +140,7 @@ class FilmeScreenTest {
         composeTestRule.onNodeWithText("Ok").performClick()
 
         verify {
-            viewModel.addMovie(eq("My new movie"))
+            viewModel.submitDialog(eq("My new movie"))
         }
     }
 }

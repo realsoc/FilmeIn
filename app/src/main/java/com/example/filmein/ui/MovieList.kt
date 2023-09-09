@@ -1,7 +1,11 @@
 package com.example.filmein.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -26,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDismissState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -40,6 +45,23 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 import com.example.filmein.Movie
 import com.example.filmein.R
 
+data class DismissBehavior(val onDismiss: (movie: Movie) -> Unit, val background: DismissBackground)
+data class DismissBackground(val color: Color, val icon: ImageVector)
+
+val deletingMovieBackground = DismissBackground(Color.Red, Icons.Default.Delete)
+
+@Composable
+fun EmptyList(modifier: Modifier) {
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.movie_animation))
+
+    LottieAnimation(
+        modifier = modifier,
+        composition = composition,
+        iterations = LottieConstants.IterateForever,
+    )
+}
+
+
 @Composable
 fun MovieList(
     paddingValues: PaddingValues,
@@ -47,15 +69,29 @@ fun MovieList(
     onMovieDeleted: ((movie: Movie) -> Unit),
     onWatchedStatusChangeForMovie: (movie: Movie, watched: Boolean) -> Unit
 ) {
+    // Create a MutableTransitionState<Boolean> for the AnimatedVisibility.
+    val state = remember {
+        MutableTransitionState(false).apply {
+            // Start the animation immediately.
+            targetState = true
+        }
+    }
+
+    // Placeholder or movie list
     if (movies.isEmpty()) {
-        EmptyList(modifier = Modifier.fillMaxSize())
+        AnimatedVisibility(
+            visibleState = state,
+            enter = fadeIn(animationSpec = tween(3000))
+        ) {
+            EmptyList(modifier = Modifier.fillMaxSize())
+        }
     } else {
         LazyColumn(modifier = Modifier.padding(paddingValues)) {
             showMovieListIfNotEmpty(
                 movies = movies,
                 title = null,
-                startToEndDismissBehavior = DismissBehavior(onMovieDeleted, deletingMovieBackground),
-                endToStartDismissBehavior = null,
+                swipeRightDismissBehavior = DismissBehavior(onMovieDeleted, deletingMovieBackground),
+                swipeLeftDismissBehavior = null,
                 onWatchStatusChangeForMovie = onWatchedStatusChangeForMovie
             )
         }
@@ -68,15 +104,6 @@ fun onWatchStatusChangeForMovie(
 ): (watched: Boolean) -> Unit {
     return { watched: Boolean -> onStatusChange(movie, watched) }
 }
-
-// TODO : How to handle colors
-// TODO : Splash screen
-// TODO : Error message in dialog
-
-val deletingMovieBackground = DismissBackground(Color.Red, Icons.Default.Delete)
-
-data class DismissBehavior(val onDismiss: (movie: Movie) -> Unit, val background: DismissBackground)
-data class DismissBackground(val color: Color, val icon: ImageVector)
 
 @OptIn(ExperimentalMaterial3Api::class)
 fun createDismissDirectionSet(
@@ -93,11 +120,13 @@ fun createDismissDirectionSet(
 fun LazyListScope.showMovieListIfNotEmpty(
     movies: List<Movie>,
     title: String?,
-    startToEndDismissBehavior: DismissBehavior?,
-    endToStartDismissBehavior: DismissBehavior?,
+    swipeRightDismissBehavior: DismissBehavior?,
+    swipeLeftDismissBehavior: DismissBehavior?,
     onWatchStatusChangeForMovie: (movie: Movie, watched: Boolean) -> Unit
 ) {
-    if (movies.isEmpty()) { return }
+    if (movies.isEmpty()) {
+        return
+    }
 
     items(
         items = movies,
@@ -107,13 +136,13 @@ fun LazyListScope.showMovieListIfNotEmpty(
             confirmValueChange = {
                 when (it) {
                     DismissValue.Default -> {}
-                    DismissValue.DismissedToStart -> endToStartDismissBehavior?.onDismiss?.invoke(movie)
-                    DismissValue.DismissedToEnd -> startToEndDismissBehavior?.onDismiss?.invoke(movie)
+                    DismissValue.DismissedToStart -> swipeLeftDismissBehavior?.onDismiss?.invoke(movie)
+                    DismissValue.DismissedToEnd -> swipeRightDismissBehavior?.onDismiss?.invoke(movie)
                 }
                 return@rememberDismissState false
             }
         )
-        val dismissDirections = createDismissDirectionSet(startToEndDismissBehavior, endToStartDismissBehavior)
+        val dismissDirections = createDismissDirectionSet(swipeRightDismissBehavior, swipeLeftDismissBehavior)
         SwipeToDismiss(
             state = dismissState,
             directions = dismissDirections,
@@ -123,8 +152,8 @@ fun LazyListScope.showMovieListIfNotEmpty(
                 if (dismissDirections.contains(direction).not()) return@SwipeToDismiss
 
                 val activeBackground = when (direction) {
-                    DismissDirection.StartToEnd -> startToEndDismissBehavior?.background
-                    DismissDirection.EndToStart -> endToStartDismissBehavior?.background
+                    DismissDirection.StartToEnd -> swipeRightDismissBehavior?.background
+                    DismissDirection.EndToStart -> swipeLeftDismissBehavior?.background
                 }
                 val backgroundColor = when (dismissState.targetValue) {
                     DismissValue.Default -> Color.LightGray
@@ -142,7 +171,8 @@ fun LazyListScope.showMovieListIfNotEmpty(
                 )
 
                 Box(
-                    Modifier.fillMaxSize()
+                    Modifier
+                        .fillMaxSize()
                         .background(color)
                         .padding(horizontal = 20.dp),
                     contentAlignment = alignment
@@ -155,7 +185,10 @@ fun LazyListScope.showMovieListIfNotEmpty(
                 }
             },
             dismissContent = {
-                MovieTile(movie = movie, onWatchStatusChange = onWatchStatusChangeForMovie(movie, onWatchStatusChangeForMovie))
+                MovieTile(
+                    movie = movie,
+                    onWatchStatusChange = onWatchStatusChangeForMovie(movie, onWatchStatusChangeForMovie)
+                )
             }
         )
     }
@@ -166,26 +199,21 @@ fun LazyListScope.showMovieListIfNotEmpty(
 fun MovieTile(movie: Movie, onWatchStatusChange: (watched: Boolean) -> Unit) {
     Column {
         ListItem(
-            modifier = Modifier.clickable { println("${movie.title} clicked") }.testTag("listItem"),
+            modifier = Modifier
+                .clickable { println("${movie.title} clicked") }
+                .testTag("listItem"),
             headlineContent = { Text(movie.title) },
             trailingContent = {
                 IconButton(
                     onClick = { onWatchStatusChange(!movie.watched) },
-                    content = { Icon(movie.getWatchStatusDrawable(), "switch watched status", tint = Color
-                        .Unspecified) })
+                    content = {
+                        Icon(
+                            movie.getWatchStatusDrawable(), "switch watched status", tint = Color
+                                .Unspecified
+                        )
+                    })
             }
         )
         Divider(color = Color.LightGray)
     }
-}
-
-@Composable
-fun EmptyList(modifier: Modifier) {
-    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.movie_animation))
-
-    LottieAnimation(
-        modifier = modifier,
-        composition = composition,
-        iterations = LottieConstants.IterateForever,
-    )
 }
