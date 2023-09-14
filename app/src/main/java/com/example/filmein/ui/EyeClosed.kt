@@ -1,21 +1,19 @@
 package com.example.filmein.ui
 
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.group
-import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
 
 private var _vector: ImageVector? = null
 
-public val EyeClosed: ImageVector
+val EyeClosed: ImageVector
     get() {
         if (_vector != null) {
             return _vector!!
@@ -31,7 +29,7 @@ public val EyeClosed: ImageVector
                 group {
                     path(
                         fill = SolidColor(Color(0xFFFFFFFF)),
-                        fillAlpha = 1.0f,
+                        fillAlpha = 0f,
                         stroke = null,
                         strokeAlpha = 1.0f,
                         strokeLineWidth = 1.0f,

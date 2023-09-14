@@ -1,8 +1,14 @@
 package com.example.filmein
 
-import androidx.compose.ui.test.junit4.createComposeRule
+import com.example.filmein.data.MovieRepository
+import com.example.filmein.ui.FilmeScreenViewModel
+import com.example.filmein.ui.ListUiState
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.mockk
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -13,6 +19,9 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FilmeScreenViewModelTest {
+
+    private lateinit var movieEmitter: MutableSharedFlow<List<Movie>>
+    private lateinit var mockedRepository: MovieRepository
     private lateinit var testedVm: FilmeScreenViewModel
 
     @get:Rule
@@ -20,13 +29,22 @@ class FilmeScreenViewModelTest {
 
     @Before
     fun setUp() {
-        testedVm = FilmeScreenViewModel()
+        movieEmitter = MutableSharedFlow()
+        mockedRepository = mockk()
+
+        coEvery { mockedRepository.addMovie(any()) } returns Unit
+        coEvery { mockedRepository.removeMovie(any()) } returns Unit
+        coEvery { mockedRepository.changeWatchStatusForMovie(any(), any()) } returns Unit
+        coEvery { mockedRepository.movies } returns movieEmitter
+
+        testedVm = FilmeScreenViewModel(mockedRepository)
     }
 
     @Test
-    fun init() = runTest {
+    fun initialState() = runTest {
         val moviesStates = mutableListOf<ListUiState>()
         val dialogStates = mutableListOf<Boolean>()
+
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             testedVm.movieListState.toList(moviesStates)
         }
@@ -42,44 +60,59 @@ class FilmeScreenViewModelTest {
     }
 
     @Test
-    fun addMovie() = runTest {
+    fun transmittingMovies() = runTest {
         val moviesStates = mutableListOf<ListUiState>()
-        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
-            testedVm.movieListState.toList(moviesStates)
-        }
-
-        testedVm.submitDialog("Movie to add")
-
-        assertEquals(2, moviesStates.size)
-        assertEquals(1, moviesStates[1].size)
-        assertEquals("Movie to add", moviesStates[1].first().title)
-    }
-
-    @Test
-    fun removeMovie() = runTest {
-        val moviesStates = mutableListOf<ListUiState>()
-
-        testedVm.submitDialog("Movie1")
-        testedVm.submitDialog("Movie2")
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             testedVm.movieListState.toList(moviesStates)
         }
 
         assertEquals(1, moviesStates.size)
-        assertEquals(2, moviesStates[0].size)
+        assertEquals(0, moviesStates[0].size)
 
-        val movie = moviesStates.first()[0]
+        val movie1 = Movie("Movie1", false)
+        val movie2 = Movie("Movie2", false)
 
-        assertEquals("Movie2", movie.title)
+        movieEmitter.emit(listOf(movie1, movie2))
+
+        assertEquals(2, moviesStates.size)
+        assertEquals(2, moviesStates[1].size)
+    }
+
+    @Test
+    fun addMovie() = runTest {
+        val moviesStates = mutableListOf<ListUiState>()
+
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            testedVm.movieListState.toList(moviesStates)
+        }
+
+        testedVm.submitDialog("Movie to add")
+
+        coVerify { mockedRepository.addMovie(match {
+            it.title == "Movie to add" && !it.watched
+        }) }
+    }
+
+    @Test
+    fun removeMovie() = runTest {
+        val moviesStates = mutableListOf<ListUiState>()
+
+        val movie = Movie("Movie1", false)
+
+        movieEmitter.emit(listOf(movie))
+
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
+            testedVm.movieListState.toList(moviesStates)
+        }
+
+        assertEquals(1, moviesStates.size)
+        assertEquals(1, moviesStates[0].size)
+        assertEquals("Movie1", movie.title)
 
         testedVm.movieSwipedRight(movie)
 
-        assertEquals(2, moviesStates.size)
-
-        assertEquals(1, moviesStates[1].size)
-
-        assertEquals("Movie1", moviesStates[1].first().title)
+        coVerify { mockedRepository.removeMovie(movie) }
     }
 
     @Test
@@ -121,7 +154,9 @@ class FilmeScreenViewModelTest {
     fun changeStatusOfMovie() = runTest {
         val moviesStates = mutableListOf<ListUiState>()
 
-        testedVm.submitDialog("Movie1")
+        val movie = Movie("Movie1", false)
+
+        movieEmitter.emit(listOf(movie))
 
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             testedVm.movieListState.toList(moviesStates)
@@ -130,18 +165,10 @@ class FilmeScreenViewModelTest {
         assertEquals(1, moviesStates.size)
         assertEquals(1, moviesStates[0].size)
 
-        val movie = moviesStates[0].first()
-
         assertEquals(false, movie.watched)
 
-        testedVm.eyeToggled(movie, true)
+        testedVm.eyeToggled(movie)
 
-        assertEquals(2, moviesStates.size)
-        assertEquals(1, moviesStates[1].size)
-
-        val newMovie = moviesStates[1].first()
-
-        assertEquals(movie.title, newMovie.title)
-        assertEquals(true, newMovie.watched)
+        coVerify { mockedRepository.changeWatchStatusForMovie(movie, true) }
     }
 }

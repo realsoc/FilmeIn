@@ -1,6 +1,7 @@
 package com.example.filmein.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasParent
@@ -13,8 +14,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeRight
-import com.example.filmein.FilmeScreenViewModel
-import com.example.filmein.ListUiState
 import com.example.filmein.Movie
 import io.mockk.Runs
 import io.mockk.every
@@ -60,7 +59,7 @@ class FilmeScreenTest {
         every { viewModel.dismissDialog() } just Runs
         every { viewModel.movieSwipedRight(any()) } just Runs
         every { viewModel.submitDialog(any()) } just Runs
-        every { viewModel.eyeToggled(any(), any()) } just Runs
+        every { viewModel.eyeToggled(any()) } just Runs
 
         composeTestRule.setContent {
             FilmeScreen(viewModel = viewModel)
@@ -114,7 +113,7 @@ class FilmeScreenTest {
         composeTestRule.onNode(hasParent(hasText("movie1")).and(hasContentDescription("switch watched status"))).performClick()
 
         verify {
-            viewModel.eyeToggled(match { it.title == "movie1" }, true)
+            viewModel.eyeToggled(match { it.title == "movie1" })
         }
     }
 
@@ -142,5 +141,12 @@ class FilmeScreenTest {
         verify {
             viewModel.submitDialog(eq("My new movie"))
         }
+    }
+
+    @Test
+    fun dialogHasFocusWhenOpen() {
+        shouldShowDialogFlow.update { true }
+
+        composeTestRule.onNodeWithTag("dialog text field").assertIsFocused()
     }
 }

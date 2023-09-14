@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+option java_package = "com.example.filmein";
+option java_multiple_files = true;
+
+message MovieProto {
+  string title = 1;
+  bool watched = 2;
+}
+
+message MoviesProto {
+  repeated MovieProto movieProto = 1;
+}

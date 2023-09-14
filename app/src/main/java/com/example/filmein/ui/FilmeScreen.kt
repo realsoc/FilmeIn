@@ -21,15 +21,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.filmein.FilmeScreenViewModel
 import com.example.filmein.ifTrue
 
-@Composable
-@Preview
-fun FilmeScreenPreview() {
-    FilmeScreen(viewModel = FilmeScreenViewModel())
-}
 @Composable
 fun FilmeScreen(viewModel: FilmeScreenViewModel) {
     val movies by viewModel.movieListState.collectAsState()
@@ -86,7 +79,7 @@ fun FilmeScreen(viewModel: FilmeScreenViewModel) {
                 paddingValues = paddingValues,
                 movies = movies,
                 onMovieDeleted = viewModel::movieSwipedRight,
-                onWatchedStatusChangeForMovie = viewModel::eyeToggled
+                onWatchedStatusToggledForMovie = viewModel::eyeToggled
             )
         })
 }

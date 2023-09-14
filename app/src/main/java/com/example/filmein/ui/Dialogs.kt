@@ -13,9 +13,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
@@ -72,13 +76,16 @@ fun EnterTextDialog(
         onDismissRequest = onDismissRequest) {
 
         val focusManager = LocalFocusManager.current
+        val focusRequester: FocusRequester = remember { FocusRequester() }
 
         OutlinedTextField(
             value = value,
             onValueChange = onNewText,
             label = hint,
             singleLine = true,
-            modifier = Modifier.testTag("dialog text field"),
+            modifier = Modifier
+                .testTag("dialog text field")
+                .focusRequester(focusRequester),
             keyboardOptions = KeyboardOptions.Default.copy(
                 capitalization = KeyboardCapitalization.Sentences,
                 autoCorrect = true,
@@ -89,5 +96,9 @@ fun EnterTextDialog(
                 focusManager.moveFocus(FocusDirection.Down)
             })
         )
+
+        LaunchedEffect(Unit) {
+            focusRequester.requestFocus()
+        }
     }
 }

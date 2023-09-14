@@ -1,5 +1,10 @@
 package com.example.filmein
 
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.dataStore
+import com.example.filmein.data.MoviesSerializer
+
 /**
  * if This is true execute block, otherwise return null
  *
@@ -14,3 +19,8 @@ fun <T>Boolean.ifTrue(block: () -> T): T? {
         null
     }
 }
+
+val Context.moviesDataStore: DataStore<MoviesProto> by dataStore(
+    fileName = "movies.pb",
+    serializer = MoviesSerializer
+)
